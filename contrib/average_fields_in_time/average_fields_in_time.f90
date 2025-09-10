@@ -63,4 +63,5 @@ program average_fields_in_time
 
   call neko_finalize
 
+
 end program average_fields_in_time

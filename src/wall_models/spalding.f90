@@ -129,6 +129,7 @@ contains
 
     call this%finalize_base(msk, facet)
     call this%nu%init(this%n_nodes)
+	
   end subroutine spalding_finalize
 
   !> Constructor from components.

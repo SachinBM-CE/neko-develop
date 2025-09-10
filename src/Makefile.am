@@ -375,6 +375,8 @@ neko_fortran_SOURCES = \
 	wall_models/spalding.f90\
 	wall_models/bcknd/cpu/spalding_cpu.f90\
 	wall_models/bcknd/device/spalding_device.F90\
+        wall_models/rlwm.f90\
+        wall_models/bcknd/cpu/rlwm_cpu.f90\	
 	wall_models/wall_model_fctry.f90\
 	neko.f90
 
