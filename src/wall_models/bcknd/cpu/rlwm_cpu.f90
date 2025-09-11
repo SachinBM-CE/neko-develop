@@ -66,7 +66,8 @@ contains
 	   recvcounts, displs, total_agents, state, action, global_state, global_action, &
 	   episode, global_state_older, global_action_older, global_reward, global_terminal, &
 	   p_loss_val, q_loss_val, &
-	   msk, reward_field, slope_field, intercept_field)
+	   msk, reward_field, slope_field, intercept_field, &
+	   global_recvcounts, global_displs)
 	   
     integer, intent(in) :: n_nodes, lx, nelv, tstep
     real(kind=rp), dimension(lx, lx, lx, nelv), intent(in) :: u, v, w
@@ -95,7 +96,7 @@ contains
 	!> 4D Arrays
 	real(kind=rp), dimension(lx, lx, lx, nelv), intent(inout) :: dudy
 	!> 1D Integer Arrays
-	integer, dimension(pe_size), intent(inout) :: recvcounts, displs
+	integer, dimension(pe_size), intent(inout) :: recvcounts, displs, global_recvcounts, global_displs
 	!> 1D Real Arrays
 	real(kind=rp), dimension(total_agents), intent(inout) :: global_reward, global_terminal	
 	!> 2D Arrays
@@ -227,14 +228,14 @@ contains
 	
 	!> MPI_Gatherv for global_state -----------------------------------------------------------------------------------------------
 	call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
-                     global_state, 2*recvcounts, 2*displs, MPI_DOUBLE_PRECISION, &
+                     global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
                      0, NEKO_COMM, ierr)
-	! if (pe_rank==0) then
-		! print *, "ierr from mpi_gatherv = ", ierr
-		! print *, "shape(global_state): ", shape(global_state)
-		! print *, "size(global_state): ", size(global_state)
-		! print *
-	! end if
+	if (pe_rank==0) then
+		print *, "ierr from MPI_Gatherv = ", ierr
+		print *, "shape(global_state): ", shape(global_state)
+		print *, "size(global_state): ", size(global_state)
+		print *
+	end if
 	! -----------------------------------------------------------------------------------------------------------------------------
 	
 	!> Get actions by doing a forward pass through the policy network -------------------------------------------------------------
@@ -250,11 +251,11 @@ contains
 	call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
                      action, n_nodes, MPI_DOUBLE_PRECISION, &
                      0, NEKO_COMM, ierr)
-	! if (pe_rank==0) then
-		! print *, "ierr from mpi_scatterv = ", ierr
-		! print *, "shape(global_action): ", shape(global_action)
-		! print *, "size(global_action): ", size(global_action)
-	! end if
+	if (pe_rank==0) then
+		print *, "ierr from MPI_Scatterv = ", ierr
+		print *, "shape(global_action): ", shape(global_action)
+		print *, "size(global_action): ", size(global_action)
+	end if
 	! -----------------------------------------------------------------------------------------------------------------------------
 
 	! Replay Buffer & Train (When using RL)
@@ -290,8 +291,6 @@ contains
 			res = torchfort_rl_off_policy_update_replay_buffer(tf_key, & 
 				  global_state_older, global_action_older, global_state, global_reward, global_terminal)
 			if (res /= TORCHFORT_RESULT_SUCCESS) stop
-			print *, "result of update_replay_buffer [Multi]: ", res
-			print *
 		end if
 
 		do epoch = 1, n_epochs

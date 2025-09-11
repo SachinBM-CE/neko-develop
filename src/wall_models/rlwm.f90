@@ -56,7 +56,7 @@ module rlwm
   use math
   use tensor
   use num_types, only : sp
-  use mpi_f08
+  use mpi_f08, only : MPI_INTEGER, MPI_SUCCESS, MPI_SUM, MPI_Allgather, MPI_Allreduce
   use json_utils, only : json_get
   use utils, only : neko_error
   use operators, only : grad, dudxyz
@@ -91,7 +91,7 @@ module rlwm
 	 real(kind=rp), dimension(:,:), allocatable :: state, action
 	 !> MPI
 	 integer :: total_agents, episode=0
-	 integer, dimension(:), allocatable :: recvcounts, displs
+	 integer, dimension(:), allocatable :: recvcounts, displs, global_recvcounts, global_displs
 	 real(kind=rp), dimension(:), allocatable :: global_reward, global_terminal
 	 real(kind=rp), dimension(:,:), allocatable :: global_state, global_state_old, global_state_older, & 
 												   global_action, global_action_old, global_action_older
@@ -268,11 +268,12 @@ contains
 	call this%terminal_older%init(this%n_nodes)
 	
 	allocate(this%recvcounts(pe_size), this%displs(pe_size))
+	allocate(this%global_recvcounts(pe_size), this%global_displs(pe_size))
 	
 	! Gather the number of agents (this%n_nodes) from all ranks onto all ranks
-    call mpi_allgather(this%n_nodes, 1, MPI_INTEGER, this%recvcounts, 1, MPI_INTEGER, NEKO_COMM, ierr)
+    call MPI_Allgather(this%n_nodes, 1, MPI_INTEGER, this%recvcounts, 1, MPI_INTEGER, NEKO_COMM, ierr)
     if (ierr /= MPI_SUCCESS) then
-        call neko_error("MPI_ALLGATHER failed in RLWM_init")
+        call neko_error("MPI_Allgather failed in rlwm_finalize")
     end if
     print *, "recvcounts = ", this%recvcounts
 	
@@ -286,10 +287,15 @@ contains
         end if
     end do
 	
+    do i = 1, pe_size
+        this%global_recvcounts(i) = this%recvcounts(i) * 2
+        this%global_displs(i) = this%displs(i) * 2
+    end do
+	
 	! Get the total number of agents across all ranks
-    call mpi_allreduce(this%n_nodes, this%total_agents, 1, MPI_INTEGER, MPI_SUM, NEKO_COMM, ierr)
+    call MPI_Allreduce(this%n_nodes, this%total_agents, 1, MPI_INTEGER, MPI_SUM, NEKO_COMM, ierr)
     if (ierr /= MPI_SUCCESS) then
-        call neko_error("MPI_ALLREDUCE failed in RLWM_init")
+        call neko_error("MPI_Allreduce failed in rlwm_finalize")
     end if
     print *, ">>>> total_agents = ", this%total_agents
 	
@@ -410,6 +416,9 @@ contains
 	
 	if (allocated(this%recvcounts)) deallocate(this%recvcounts)
 	if (allocated(this%displs)) deallocate(this%displs)
+	if (allocated(this%global_recvcounts)) deallocate(this%global_recvcounts)
+	if (allocated(this%global_displs)) deallocate(this%global_displs)	
+	
 	if (allocated(this%global_state)) deallocate(this%global_state)
 	if (allocated(this%global_state_old)) deallocate(this%global_state_old)
 	if (allocated(this%global_state_older)) deallocate(this%global_state_older)
@@ -472,7 +481,8 @@ contains
 			this%recvcounts, this%displs, this%total_agents, this%state, this%action, this%global_state, this%global_action, &
 			this%episode, this%global_state_older, this%global_action_older, this%global_reward, this%global_terminal, &
 			this%p_loss_val, this%q_loss_val, &
-			this%msk, this%reward_field, this%slope_field, this%intercept_field)
+			this%msk, this%reward_field, this%slope_field, this%intercept_field, &
+			this%global_recvcounts, this%global_displs)
     end if
 
   end subroutine rlwm_compute
