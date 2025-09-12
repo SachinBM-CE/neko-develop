@@ -62,7 +62,7 @@ contains
         
              ! Gather current state from all ranks
              call MPI_Gatherv(this%state, 2*this%n_nodes, MPI_DOUBLE_PRECISION, &
-                           this%global_state, 2*this%recvcounts, 2*this%displs, MPI_DOUBLE_PRECISION, &
+                           this%global_state, this%global_recvcounts, this%global_displs, MPI_DOUBLE_PRECISION, &
                            0, NEKO_COMM, ierr)
              if (pe_rank == 0) then
                 print *, "shape(this%global_state)", shape(this%global_state)

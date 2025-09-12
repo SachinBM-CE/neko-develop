@@ -262,12 +262,12 @@ contains
     if (tstep .gt. start_train_tstep) then
 	
 		do i=1, n_nodes
-		  ! if (mod(tstep, this%tsteps_rl) == 0 .and. tstep > 3) then
-		     ! this%tau_new_l(i) = this%tau_old_l(i) * this%action_transposed(1,i)
-		  ! else
-             ! this%tau_new_l(i) = this%tau_old_l(i)
-		  ! end if
-		  tau_new_l(i) = tau_old_l(i) * action(1,i)
+		  if (mod(tstep, tsteps_rl) == 0) then
+		     tau_new_l(i) = tau_old_l(i) * action(1,i)
+		  else
+             tau_new_l(i) = tau_old_l(i) + (tau_new_l(i) - tau_old_l(i)) * (mod(tstep, tsteps_rl) / tsteps_rl)
+		  end if
+		  ! tau_new_l(i) = tau_old_l(i) * action(1,i)
 		  utau_l(i) = sqrt(tau_new_l(i))
 		  ! Distribute according to the velocity vector
 		  tau_x(i) = -utau_l(i)**2 * ui_l(i) / magu_l(i)
