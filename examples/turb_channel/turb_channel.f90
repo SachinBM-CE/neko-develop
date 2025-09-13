@@ -112,25 +112,25 @@ contains
                    call copy(this%global_action_old, this%global_action, size(this%global_action))
                 end if
               
-                ! Print some global state information for debugging
-                do i = 1, min(5, this%total_agents)  ! Print first 5 global agents
-                   if (i == 1) then
-                      write(*, '(A6, A20, A20, A20, A20, A20, A20)') &
-                      'i', 'global_state', 'global_state_old', 'global_state_older', &
-                      'global_action', 'global_action_old', 'global_action_older' 
-                   end if
+                ! ! Print some global state information for debugging
+                ! do i = 1, min(5, this%total_agents)  ! Print first 5 global agents
+                   ! if (i == 1) then
+                      ! write(*, '(A6, A20, A20, A20, A20, A20, A20)') &
+                      ! 'i', 'global_state', 'global_state_old', 'global_state_older', &
+                      ! 'global_action', 'global_action_old', 'global_action_older' 
+                   ! end if
                  
-                   if (allocated(this%global_state_old) .and. allocated(this%global_state_older) .and. &
-                     allocated(this%global_action_old) .and. allocated(this%global_action_older)) then
-                     write(*, '(I6, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5)') &
-                     i, this%global_state(1,i), this%global_state_old(1,i), this%global_state_older(1,i), &
-                     this%global_action(1,i), this%global_action_old(1,i), this%global_action_older(1,i)
-                   else
-                     write(*, '(I6, ES20.5, A19, A19, ES20.5, A19, A19)') &
-                     i, this%global_state(1,i), 'not_allocated', 'not_allocated', &
-                     this%global_action(1,i), 'not_allocated', 'not_allocated'
-                   end if
-                end do
+                   ! if (allocated(this%global_state_old) .and. allocated(this%global_state_older) .and. &
+                     ! allocated(this%global_action_old) .and. allocated(this%global_action_older)) then
+                     ! write(*, '(I6, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5)') &
+                     ! i, this%global_state(1,i), this%global_state_old(1,i), this%global_state_older(1,i), &
+                     ! this%global_action(1,i), this%global_action_old(1,i), this%global_action_older(1,i)
+                   ! else
+                     ! write(*, '(I6, ES20.5, A19, A19, ES20.5, A19, A19)') &
+                     ! i, this%global_state(1,i), 'not_allocated', 'not_allocated', &
+                     ! this%global_action(1,i), 'not_allocated', 'not_allocated'
+                   ! end if
+                ! end do
               
              end if
                 

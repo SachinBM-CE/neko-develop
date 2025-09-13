@@ -165,11 +165,11 @@ contains
          tau_y(i) = -utau_l(i)**2 * vi_l(i) / magu_l(i)
          tau_z(i) = -utau_l(i)**2 * wi_l(i) / magu_l(i)	
 		 ! DEBUG
-		 call print_debug_info(i, 99, 103, n_nodes, &
-		 ui_l, vi_l, wi_l, normu_l, magu_l, h, &
-		 vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
-		 l_star, u_plus, g_plus, h_plus, state, &
-		 reward, total_reward, reward_out, base_reward, bonus_reward)	
+		 ! call print_debug_info(i, 99, 103, n_nodes, &
+		 ! ui_l, vi_l, wi_l, normu_l, magu_l, h, &
+		 ! vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
+		 ! l_star, u_plus, g_plus, h_plus, state, &
+		 ! reward, total_reward, reward_out, base_reward, bonus_reward)	
 		 
        else if (tstep .le. start_train_tstep) then
 	     ! Magnitude of Shear Stress
@@ -190,11 +190,11 @@ contains
          tau_y(i) = -utau_l(i)**2 * vi_l(i) / magu_l(i)
          tau_z(i) = -utau_l(i)**2 * wi_l(i) / magu_l(i)
 		 ! DEBUG
-		 call print_debug_info(i, 99, 103, n_nodes, &
-		 ui_l, vi_l, wi_l, normu_l, magu_l, h, &
-		 vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
-		 l_star, u_plus, g_plus, h_plus, state, &
-		 reward, total_reward, reward_out, base_reward, bonus_reward)
+		 ! call print_debug_info(i, 99, 103, n_nodes, &
+		 ! ui_l, vi_l, wi_l, normu_l, magu_l, h, &
+		 ! vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
+		 ! l_star, u_plus, g_plus, h_plus, state, &
+		 ! reward, total_reward, reward_out, base_reward, bonus_reward)
 		 
 	   else 
 	   	 ! Magnitude of Shear Stress
@@ -230,12 +230,12 @@ contains
 	call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
                      global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
                      0, NEKO_COMM, ierr)
-	if (pe_rank==0) then
-		print *, "ierr from MPI_Gatherv = ", ierr
-		print *, "shape(global_state): ", shape(global_state)
-		print *, "size(global_state): ", size(global_state)
-		print *
-	end if
+	! if (pe_rank==0) then
+		! print *, "ierr from MPI_Gatherv = ", ierr
+		! print *, "shape(global_state): ", shape(global_state)
+		! print *, "size(global_state): ", size(global_state)
+		! print *
+	! end if
 	! -----------------------------------------------------------------------------------------------------------------------------
 	
 	!> Get actions by doing a forward pass through the policy network -------------------------------------------------------------
@@ -251,11 +251,11 @@ contains
 	call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
                      action, n_nodes, MPI_DOUBLE_PRECISION, &
                      0, NEKO_COMM, ierr)
-	if (pe_rank==0) then
-		print *, "ierr from MPI_Scatterv = ", ierr
-		print *, "shape(global_action): ", shape(global_action)
-		print *, "size(global_action): ", size(global_action)
-	end if
+	! if (pe_rank==0) then
+		! print *, "ierr from MPI_Scatterv = ", ierr
+		! print *, "shape(global_action): ", shape(global_action)
+		! print *, "size(global_action): ", size(global_action)
+	! end if
 	! -----------------------------------------------------------------------------------------------------------------------------
 
 	! Replay Buffer & Train (When using RL)
@@ -279,11 +279,11 @@ contains
 							    reward, total_reward, reward_out, base_reward, bonus_reward)
 		  
 		  ! DEBUG
-		  call print_debug_info(i, 99, 103, n_nodes, &
-		                        ui_l, vi_l, wi_l, normu_l, magu_l, h, &
-		                        vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
-		                        l_star, u_plus, g_plus, h_plus, state, &
-		                        reward, total_reward, reward_out, base_reward, bonus_reward)					
+		  ! call print_debug_info(i, 99, 103, n_nodes, &
+		                        ! ui_l, vi_l, wi_l, normu_l, magu_l, h, &
+		                        ! vg_l, utau_l, tau_x, tau_z, tau_old_l, tau_new_l, &
+		                        ! l_star, u_plus, g_plus, h_plus, state, &
+		                        ! reward, total_reward, reward_out, base_reward, bonus_reward)					
 		  
 		end do ! End of action Do Loop
 
@@ -299,10 +299,10 @@ contains
 			   if (res /= TORCHFORT_RESULT_SUCCESS) stop
 			   if (is_ready) then
 			     res = torchfort_rl_off_policy_train_step(tf_key, p_loss_val, q_loss_val)			 
-			     print *, "p_loss_val = ", p_loss_val
-			     print *, "q_loss_val = ", q_loss_val
-			     print *, "result of train_step: ", res
-			     print *
+			     ! print *, "p_loss_val = ", p_loss_val
+			     ! print *, "q_loss_val = ", q_loss_val
+			     ! print *, "result of train_step: ", res
+			     ! print *
 			   end if
 			end if
 		end do

@@ -71,7 +71,7 @@
 		  "tau_true": 0.0027,
 		  "start_train_tstep": 3,
 		  "tsteps_rl": 100,
-		  "n_epochs": 20
+		  "n_epochs": 100
         }
       ],
       "flow_rate_force": 
@@ -81,7 +81,7 @@
         "use_averaged_flow": true
       },
       "output_control": "simulationtime",
-      "output_value": 0.5
+      "output_value": 1.0
     },
     "simulation_components": 
     [
