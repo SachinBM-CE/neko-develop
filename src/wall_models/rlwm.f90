@@ -300,7 +300,7 @@ contains
     print *, ">>>> total_agents = ", this%total_agents
 	
     ! Allocate global arrays
-    if (pe_rank == 0) then
+    ! if (pe_rank == 0) then
         allocate(this%global_state(2,this%total_agents))
         allocate(this%global_action(1,this%total_agents))
 		allocate(this%global_state_old(2,this%total_agents))
@@ -309,7 +309,7 @@ contains
 		allocate(this%global_action_older(1,this%total_agents))
 		allocate(this%global_reward(this%total_agents))
 		allocate(this%global_terminal(this%total_agents))
-    end if
+    ! end if
 	
     call neko_field_registry%add_field(this%dof, "reward", ignore_existing = .true.)
     this%reward_field => neko_field_registry%get_field("reward")
