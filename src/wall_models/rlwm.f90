@@ -95,7 +95,7 @@ module rlwm
 	 real(kind=rp), dimension(:), allocatable :: global_reward, global_terminal
 	 real(kind=rp), dimension(:,:), allocatable :: global_state, global_state_old, global_state_older, & 
 												   global_action, global_action_old, global_action_older
-	 !> Statistics
+	 !> Fields 
 	 type(field_t), pointer :: reward_field => null(), slope_field => null(), intercept_field => null()
 	 !> Single precision loss values
 	 real(kind=sp) :: p_loss_val, q_loss_val
@@ -267,8 +267,10 @@ contains
 	call this%terminal_old%init(this%n_nodes)
 	call this%terminal_older%init(this%n_nodes)
 	
-	allocate(this%recvcounts(pe_size), this%displs(pe_size))
-	allocate(this%global_recvcounts(pe_size), this%global_displs(pe_size))
+	! allocate(this%recvcounts(pe_size), this%displs(pe_size))
+	! allocate(this%global_recvcounts(pe_size), this%global_displs(pe_size))
+	allocate(this%recvcounts(0:(pe_size-1)), this%displs(0:(pe_size-1)))
+	allocate(this%global_recvcounts(0:(pe_size-1)), this%global_displs(0:(pe_size-1)))
 	
 	! Gather the number of agents (this%n_nodes) from all ranks onto all ranks
     call MPI_Allgather(this%n_nodes, 1, MPI_INTEGER, this%recvcounts, 1, MPI_INTEGER, NEKO_COMM, ierr)
@@ -278,16 +280,27 @@ contains
     print *, "recvcounts = ", this%recvcounts
 	
     ! Calculate the displacements for MPI_Gatherv (all ranks need this)
-    this%displs(1) = 0
-    do i = 2, pe_size
-        this%displs(i) = this%displs(i-1) + this%recvcounts(i-1)
-        if (pe_rank == 0) then
-            print *, "i = ", i, "displs(i) = ", this%displs(i), "displs(i-1) = ", this%displs(i-1), &
-                     "recvcounts(i-1)", this%recvcounts(i-1)
-        end if
+    ! this%displs(1) = 0
+    ! do i = 2, pe_size
+        ! this%displs(i) = this%displs(i-1) + this%recvcounts(i-1)
+        ! if (pe_rank == 0) then
+            ! print *, "i = ", i, "displs(i) = ", this%displs(i), "displs(i-1) = ", this%displs(i-1), &
+                     ! "recvcounts(i-1)", this%recvcounts(i-1)
+        ! end if
+    ! end do
+	! do i = 1, pe_size
+        ! this%global_recvcounts(i) = this%recvcounts(i) * 2
+        ! this%global_displs(i) = this%displs(i) * 2
+    ! end do
+    this%displs(0) = 0
+    do i = 1, (pe_size - 1)
+       this%displs(i) = this%displs(i-1) + this%recvcounts(i-1)
+       if (pe_rank == 0) then
+           print *, "i = ", i, "    displs(i) = ", this%displs(i), "    displs(i-1) = ", this%displs(i-1), &
+                     "    recvcounts(i-1)", this%recvcounts(i-1)
+       end if
     end do
-	
-    do i = 1, pe_size
+    do i = 0, pe_size-1
         this%global_recvcounts(i) = this%recvcounts(i) * 2
         this%global_displs(i) = this%displs(i) * 2
     end do
