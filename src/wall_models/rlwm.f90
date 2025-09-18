@@ -251,7 +251,11 @@ contains
 	call this%slope%init(this%n_nodes)
 	call this%intercept%init(this%n_nodes)
 	
-	allocate(this%state(2, this%n_nodes), this%action(1, this%n_nodes))
+    if (this%n_nodes > 0) then
+        allocate(this%state(2, this%n_nodes), this%action(1, this%n_nodes))
+    else
+        allocate(this%state(2, 1), this%action(1, 1))
+    end if
 	
 	call this%error_new%init(this%n_nodes)
 	call this%error_old%init(this%n_nodes)
@@ -266,6 +270,8 @@ contains
 	call this%terminal%init(this%n_nodes)
 	call this%terminal_old%init(this%n_nodes)
 	call this%terminal_older%init(this%n_nodes)
+	
+	!> Collecting receive counts, displacements & total agents ====================================================================
 	
 	! allocate(this%recvcounts(pe_size), this%displs(pe_size))
 	! allocate(this%global_recvcounts(pe_size), this%global_displs(pe_size))
@@ -312,17 +318,29 @@ contains
     end if
     print *, ">>>> total_agents = ", this%total_agents
 	
+	!==============================================================================================================================
+	
     ! Allocate global arrays
-    ! if (pe_rank == 0) then
+    if (pe_rank == 0) then
         allocate(this%global_state(2,this%total_agents))
-        allocate(this%global_action(1,this%total_agents))
 		allocate(this%global_state_old(2,this%total_agents))
 		allocate(this%global_state_older(2,this%total_agents))
+        allocate(this%global_action(1,this%total_agents))
 		allocate(this%global_action_old(1,this%total_agents))
 		allocate(this%global_action_older(1,this%total_agents))
 		allocate(this%global_reward(this%total_agents))
 		allocate(this%global_terminal(this%total_agents))
-    ! end if
+	else
+		! For non-root processes, these can be unallocated or size 1
+		allocate(this%global_state(1,1))
+		allocate(this%global_state_old(1,1))
+		allocate(this%global_state_older(1,1))
+		allocate(this%global_action(1,1))
+		allocate(this%global_action_old(1,1))
+		allocate(this%global_action_older(1,1))
+		allocate(this%global_reward(1))
+		allocate(this%global_terminal(1))
+    end if
 	
     call neko_field_registry%add_field(this%dof, "reward", ignore_existing = .true.)
     this%reward_field => neko_field_registry%get_field("reward")
@@ -395,7 +413,6 @@ contains
     call this%free_base()
 	
 	if (allocated(this%dudy)) deallocate(this%dudy)
-
 	if (allocated(this%state)) deallocate(this%state)
 	if (allocated(this%action)) deallocate(this%action)	
 	

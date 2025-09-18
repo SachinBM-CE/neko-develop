@@ -239,10 +239,9 @@ contains
 	! -----------------------------------------------------------------------------------------------------------------------------
 	
 	!> Get actions by doing a forward pass through the policy network -------------------------------------------------------------
-	! res = torchfort_rl_off_policy_predict_explore(this%tf_key, this%state, this%action)
-	! if (res /= TORCHFORT_RESULT_SUCCESS) stop
 	if (pe_rank .eq. 0) then
-		res = torchfort_rl_off_policy_predict_explore(tf_key, global_state, global_action)
+		! res = torchfort_rl_off_policy_predict_explore(tf_key, global_state, global_action)
+		res = torchfort_rl_off_policy_predict(tf_key, global_state, global_action)
 		if (res /= TORCHFORT_RESULT_SUCCESS) stop
 	end if
 	! -----------------------------------------------------------------------------------------------------------------------------

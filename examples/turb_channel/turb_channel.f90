@@ -49,119 +49,119 @@ contains
 	
 		bc => neko_user_access%case%fluid%bcs_vel%get(k)
     
-    select type (bc)
+        select type (bc)
     
-       type is (wall_model_bc_t)
-       wall_bc => bc
+            type is (wall_model_bc_t)
+            wall_bc => bc
     
-       select type(this => wall_bc%wall_model)
+            select type(this => wall_bc%wall_model)
        
-          type is (rlwm_t)
+                type is (rlwm_t)
             
-          if (allocated(this%state)) then
-        
-             ! Gather current state from all ranks
-             call MPI_Gatherv(this%state, 2*this%n_nodes, MPI_DOUBLE_PRECISION, &
-                           this%global_state, this%global_recvcounts, this%global_displs, MPI_DOUBLE_PRECISION, &
-                           0, NEKO_COMM, ierr)
-             if (pe_rank == 0) then
-                print *, "shape(this%global_state)", shape(this%global_state)
-             end if
-                        
-             ! Gather current action from all ranks  
-             call MPI_Gatherv(this%action, this%n_nodes, MPI_DOUBLE_PRECISION, &
-                           this%global_action, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-                           0, NEKO_COMM, ierr)
-             if (pe_rank == 0) then
-                print *, "shape(this%global_action)", shape(this%global_action)
-             end if
-                          
-             ! Gather current reward from all ranks  
-             call MPI_Gatherv(this%reward%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
-                           this%global_reward, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-                           0, NEKO_COMM, ierr)
-             if (pe_rank == 0) then
-                print *, "shape(this%global_reward)", shape(this%global_reward)
-             end if
-                           
-             ! Gather current terminal from all ranks  
-             call MPI_Gatherv(this%terminal%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
-                           this%global_terminal, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-                           0, NEKO_COMM, ierr)
-             if (pe_rank == 0) then
-                print *, "shape(this%global_terminal)", shape(this%global_terminal)
-             end if
+                if (allocated(this%state)) then
+				
+					! Gather current state from all ranks
+					call MPI_Gatherv(this%state, 2*this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_state, this%global_recvcounts, this%global_displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					if (pe_rank == 0) then
+						print *, "shape(this%global_state)", shape(this%global_state)
+					end if
+							
+					! Gather current action from all ranks  
+					call MPI_Gatherv(this%action, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_action, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					if (pe_rank == 0) then
+						print *, "shape(this%global_action)", shape(this%global_action)
+					end if
+							  
+					! Gather current reward from all ranks  
+					call MPI_Gatherv(this%reward%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_reward, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					if (pe_rank == 0) then
+						print *, "shape(this%global_reward)", shape(this%global_reward)
+					end if
+							   
+					! Gather current terminal from all ranks  
+					call MPI_Gatherv(this%terminal%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_terminal, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					if (pe_rank == 0) then
+						print *, "shape(this%global_terminal)", shape(this%global_terminal)
+					end if
 
-             ! Only rank 0 processes global arrays
-             if (pe_rank == 0) then
-              
-                ! Copy global arrays to their "old" and "older" versions
-                if (allocated(this%global_state_older)) then
-                   call copy(this%global_state_older, this%global_state_old, size(this%global_state_old))
-                end if
-              
-                if (allocated(this%global_state_old)) then
-                   call copy(this%global_state_old, this%global_state, size(this%global_state))
-                end if
-              
-                if (allocated(this%global_action_older)) then
-                   call copy(this%global_action_older, this%global_action_old, size(this%global_action_old))
-                end if
-              
-                if (allocated(this%global_action_old)) then
-                   call copy(this%global_action_old, this%global_action, size(this%global_action))
-                end if
-              
-                ! ! Print some global state information for debugging
-                ! do i = 1, min(5, this%total_agents)  ! Print first 5 global agents
-                   ! if (i == 1) then
-                      ! write(*, '(A6, A20, A20, A20, A20, A20, A20)') &
-                      ! 'i', 'global_state', 'global_state_old', 'global_state_older', &
-                      ! 'global_action', 'global_action_old', 'global_action_older' 
-                   ! end if
-                 
-                   ! if (allocated(this%global_state_old) .and. allocated(this%global_state_older) .and. &
-                     ! allocated(this%global_action_old) .and. allocated(this%global_action_older)) then
-                     ! write(*, '(I6, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5)') &
-                     ! i, this%global_state(1,i), this%global_state_old(1,i), this%global_state_older(1,i), &
-                     ! this%global_action(1,i), this%global_action_old(1,i), this%global_action_older(1,i)
-                   ! else
-                     ! write(*, '(I6, ES20.5, A19, A19, ES20.5, A19, A19)') &
-                     ! i, this%global_state(1,i), 'not_allocated', 'not_allocated', &
-                     ! this%global_action(1,i), 'not_allocated', 'not_allocated'
-                   ! end if
-                ! end do
-              
-             end if
-                
-          if ((mod(tstep, this%tsteps_rl) == 0) .or. (abs(t - time%end_time) .le. 1.0e-3_rp)) then
-             reward_sum = glsum(this%total_reward%x(:), this%n_nodes)
-             this%episode = this%episode + 1
-			 ! ::: WANDB LOGGING :::
-             res = torchfort_rl_off_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
-			 ! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
-			 ! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
-			 ! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "rew_out", this%episode, this%reward_out(1))
-			 ! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "tau_new", this%episode, this%tau_new_l(1))
-          end if
-          
-          do i = 1, this%n_nodes
+					! Only rank 0 processes global arrays
+					if (pe_rank == 0) then
+				  
+						! Copy global arrays to their "old" and "older" versions
+						if (allocated(this%global_state_older)) then
+							call copy(this%global_state_older, this%global_state_old, size(this%global_state_old))
+						end if
+				  
+						if (allocated(this%global_state_old)) then
+							call copy(this%global_state_old, this%global_state, size(this%global_state))
+						end if
+				  
+						if (allocated(this%global_action_older)) then
+							call copy(this%global_action_older, this%global_action_old, size(this%global_action_old))
+						end if
+				  
+						if (allocated(this%global_action_old)) then
+							call copy(this%global_action_old, this%global_action, size(this%global_action))
+						end if
+				  
+						! ! Print some global state information for debugging
+						! do i = 1, min(5, this%total_agents)  ! Print first 5 global agents
+						   ! if (i == 1) then
+							  ! write(*, '(A6, A20, A20, A20, A20, A20, A20)') &
+							  ! 'i', 'global_state', 'global_state_old', 'global_state_older', &
+							  ! 'global_action', 'global_action_old', 'global_action_older' 
+						   ! end if
+						 
+						   ! if (allocated(this%global_state_old) .and. allocated(this%global_state_older) .and. &
+							 ! allocated(this%global_action_old) .and. allocated(this%global_action_older)) then
+							 ! write(*, '(I6, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5, ES20.5)') &
+							 ! i, this%global_state(1,i), this%global_state_old(1,i), this%global_state_older(1,i), &
+							 ! this%global_action(1,i), this%global_action_old(1,i), this%global_action_older(1,i)
+						   ! else
+							 ! write(*, '(I6, ES20.5, A19, A19, ES20.5, A19, A19)') &
+							 ! i, this%global_state(1,i), 'not_allocated', 'not_allocated', &
+							 ! this%global_action(1,i), 'not_allocated', 'not_allocated'
+						   ! end if
+						! end do
+				  
+					end if
+					
+					if ((mod(tstep, this%tsteps_rl) == 0) .or. (abs(t - time%end_time) .le. 1.0e-3_rp)) then
+						reward_sum = glsum(this%total_reward%x(:), this%n_nodes)
+						this%episode = this%episode + 1
+						! ::: WANDB LOGGING :::
+						res = torchfort_rl_off_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
+						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
+						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
+						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "rew_out", this%episode, this%reward_out(1))
+						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "tau_new", this%episode, this%tau_new_l(1))
+					end if
+			  
+					do i = 1, this%n_nodes
 
-             if ((mod(tstep, this%tsteps_rl) == 0) .or. (abs(t - time%end_time) .le. 1.0e-3_rp)) then
-                this%terminal%x(i) = 1.0_rp
-                this%total_reward%x(i) = 0.0_rp
-             else
-                this%terminal%x(i) = 0.0_rp
-             end if
+						if ((mod(tstep, this%tsteps_rl) == 0) .or. (abs(t - time%end_time) .le. 1.0e-3_rp)) then
+							this%terminal%x(i) = 1.0_rp
+							this%total_reward%x(i) = 0.0_rp
+						else
+							this%terminal%x(i) = 0.0_rp
+						end if
 
-          end do
+					end do
+			  
+					call copy(this%terminal_older%x, this%terminal_old%x, size(this%terminal_old%x))
+					call copy(this%terminal_old%x, this%terminal%x, size(this%terminal%x))
           
-          call copy(this%terminal_older%x, this%terminal_old%x, size(this%terminal_old%x))
-          call copy(this%terminal_old%x, this%terminal%x, size(this%terminal%x))
-          
-          end if
+				end if
+			end select
         end select
-      end select
     end do
   end subroutine usercheck
 
