@@ -66,8 +66,7 @@ contains
 	   recvcounts, displs, total_agents, state, action, global_state, global_action, &
 	   episode, global_state_older, global_action_older, global_reward, global_terminal, &
 	   p_loss_val, q_loss_val, &
-	   msk, reward_field, slope_field, intercept_field, &
-	   global_recvcounts, global_displs)
+	   msk, reward_field, slope_field, intercept_field)
 	   
     integer, intent(in) :: n_nodes, lx, nelv, tstep
     real(kind=rp), dimension(lx, lx, lx, nelv), intent(in) :: u, v, w
@@ -96,7 +95,7 @@ contains
 	!> 4D Arrays
 	real(kind=rp), dimension(lx, lx, lx, nelv), intent(inout) :: dudy
 	!> 1D Integer Arrays
-	integer, dimension(pe_size), intent(inout) :: recvcounts, displs, global_recvcounts, global_displs
+	integer, dimension(pe_size), intent(inout) :: recvcounts, displs
 	!> 1D Real Arrays
 	real(kind=rp), dimension(total_agents), intent(inout) :: global_reward, global_terminal	
 	!> 2D Arrays
@@ -111,7 +110,7 @@ contains
 	logical :: is_ready = .false.
 	!******************************************************************************************************************************
 	
-    if (tstep == 1) then
+    if (tstep .eq. 1 .and. pe_rank .eq. 0) then
       print *, ""
       print *, "======================================================"
       print *, "  Verifying RLWM parameters from JSON file:"
@@ -227,15 +226,9 @@ contains
 	end do
 	
 	!> MPI_Gatherv for global_state -----------------------------------------------------------------------------------------------
-	if (n_nodes > 0) then
-		call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
-						 global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
-						 0, NEKO_COMM, ierr)
-	else 
-		call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-						 global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
-						 0, NEKO_COMM, ierr)
-	end if
+	call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
+					 global_state, 2*recvcounts, 2*displs, MPI_DOUBLE_PRECISION, &
+					 0, NEKO_COMM, ierr)
 	! if (pe_rank==0) then
 		! print *, "ierr from MPI_Gatherv = ", ierr
 		! print *, "shape(global_state): ", shape(global_state)
@@ -253,15 +246,9 @@ contains
 	! -----------------------------------------------------------------------------------------------------------------------------
 	
 	!> MPI_Scatterv for global_action ---------------------------------------------------------------------------------------------
-	if (n_nodes > 0) then
-		call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
-						 action, n_nodes, MPI_DOUBLE_PRECISION, &
-						 0, NEKO_COMM, ierr)
-	else
-		call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
-						 MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-						 0, NEKO_COMM, ierr)
-	end if
+	call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
+					 action, n_nodes, MPI_DOUBLE_PRECISION, &
+					 0, NEKO_COMM, ierr)
 	! if (pe_rank==0) then
 		! print *, "ierr from MPI_Scatterv = ", ierr
 		! print *, "shape(global_action): ", shape(global_action)

@@ -61,60 +61,36 @@ contains
                 if (allocated(this%state)) then
 				
 					! Gather current state from all ranks
-					if (this%n_nodes > 0) then
-						call MPI_Gatherv(this%state, 2*this%n_nodes, MPI_DOUBLE_PRECISION, &
-										 this%global_state, this%global_recvcounts, this%global_displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					else 
-						call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-										 this%global_state, this%global_recvcounts, this%global_displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					end if
-					if (pe_rank == 0) then
-						print *, "shape(this%global_state)", shape(this%global_state)
-					end if
+					call MPI_Gatherv(this%state, 2*this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_state, 2*this%recvcounts, 2*this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					! if (pe_rank == 0) then
+						! print *, "shape(this%global_state)", shape(this%global_state)
+					! end if
 							
 					! Gather current action from all ranks  
-					if (this%n_nodes > 0) then
-						call MPI_Gatherv(this%action, this%n_nodes, MPI_DOUBLE_PRECISION, &
-										 this%global_action, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					else
-						call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-										 this%global_action, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					end if
-					if (pe_rank == 0) then
-						print *, "shape(this%global_action)", shape(this%global_action)
-					end if
+					call MPI_Gatherv(this%action, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_action, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					! if (pe_rank == 0) then
+						! print *, "shape(this%global_action)", shape(this%global_action)
+					! end if
 							  
 					! Gather current reward from all ranks  
-					if (this%n_nodes > 0) then
-						call MPI_Gatherv(this%reward%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
-										 this%global_reward, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					else
-						call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-										 this%global_reward, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					end if
-					if (pe_rank == 0) then
-						print *, "shape(this%global_reward)", shape(this%global_reward)
-					end if
+					call MPI_Gatherv(this%reward%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_reward, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					! if (pe_rank == 0) then
+						! print *, "shape(this%global_reward)", shape(this%global_reward)
+					! end if
 							   
-					! Gather current terminal from all ranks  
-					if (this%n_nodes > 0) then			
-						call MPI_Gatherv(this%terminal%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
-										 this%global_terminal, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					else
-						call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
-										 this%global_terminal, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
-										 0, NEKO_COMM, ierr)
-					end if
-					if (pe_rank == 0) then
-						print *, "shape(this%global_terminal)", shape(this%global_terminal)
-					end if
+					! Gather current terminal from all ranks  		
+					call MPI_Gatherv(this%terminal%x, this%n_nodes, MPI_DOUBLE_PRECISION, &
+									 this%global_terminal, this%recvcounts, this%displs, MPI_DOUBLE_PRECISION, &
+									 0, NEKO_COMM, ierr)
+					! if (pe_rank == 0) then
+						! print *, "shape(this%global_terminal)", shape(this%global_terminal)
+					! end if
 
 					! Only rank 0 processes global arrays
 					if (pe_rank == 0) then
