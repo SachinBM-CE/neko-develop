@@ -35,13 +35,13 @@ module rlwm_cpu
   use num_types, only : rp
   use logger, only : neko_log, NEKO_LOG_DEBUG, LOG_SIZE
   
-  !> TorchFort =======================================================
+  !> TorchFort =====================================================================
   use comm, only : pe_size, pe_rank, NEKO_COMM
-  use mpi_f08, only : MPI_Gatherv, MPI_Scatterv, MPI_DOUBLE_PRECISION
+  use mpi_f08, only : MPI_Gatherv, MPI_Scatterv, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
   use torchfort
   use num_types, only : sp
   use field, only : field_t
-  !===================================================================
+  !=================================================================================
   
   implicit none
   private
@@ -227,9 +227,15 @@ contains
 	end do
 	
 	!> MPI_Gatherv for global_state -----------------------------------------------------------------------------------------------
-	call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
-                     global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
-                     0, NEKO_COMM, ierr)
+	if (n_nodes > 0) then
+		call MPI_Gatherv(state, 2*n_nodes, MPI_DOUBLE_PRECISION, &
+						 global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
+						 0, NEKO_COMM, ierr)
+	else 
+		call MPI_Gatherv(MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
+						 global_state, global_recvcounts, global_displs, MPI_DOUBLE_PRECISION, &
+						 0, NEKO_COMM, ierr)
+	end if
 	! if (pe_rank==0) then
 		! print *, "ierr from MPI_Gatherv = ", ierr
 		! print *, "shape(global_state): ", shape(global_state)
@@ -247,9 +253,15 @@ contains
 	! -----------------------------------------------------------------------------------------------------------------------------
 	
 	!> MPI_Scatterv for global_action ---------------------------------------------------------------------------------------------
-	call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
-                     action, n_nodes, MPI_DOUBLE_PRECISION, &
-                     0, NEKO_COMM, ierr)
+	if (n_nodes > 0) then
+		call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
+						 action, n_nodes, MPI_DOUBLE_PRECISION, &
+						 0, NEKO_COMM, ierr)
+	else
+		call MPI_Scatterv(global_action, recvcounts, displs, MPI_DOUBLE_PRECISION, &
+						 MPI_IN_PLACE, 0, MPI_DOUBLE_PRECISION, &
+						 0, NEKO_COMM, ierr)
+	end if
 	! if (pe_rank==0) then
 		! print *, "ierr from MPI_Scatterv = ", ierr
 		! print *, "shape(global_action): ", shape(global_action)
