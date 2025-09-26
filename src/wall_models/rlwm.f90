@@ -76,7 +76,7 @@ module rlwm
 	 
 	 !> TorchFort =================================================================================================================
 	 !> JSON INPUTS 
-	 character(len=256) :: tf_key, yaml_path, log_dir
+	 character(len=256) :: tf_key, yaml_path, log_dir, policy_method
 	 integer :: model_device, rb_device, start_train_tstep, tsteps_rl, n_epochs
 	 real(kind=rp) :: tau_true
 	 !> Vectors
@@ -176,6 +176,9 @@ contains
 
 	call json_get(json, "log_dir", tmp_string)
 	this%log_dir = trim(tmp_string)
+	
+	call json_get(json, "policy_method", tmp_string)
+	this%policy_method = trim(tmp_string)
 
 	call json_get_or_default(json, "model_device", tmp_real, -1.0_rp)
 	this%model_device = int(tmp_real)
@@ -200,15 +203,25 @@ contains
 	print *, "Result of set_manual_seed : ", res
 	print *
 	
-	res = torchfort_rl_off_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
-	if (res /= TORCHFORT_RESULT_SUCCESS) stop
-	print *, "Result of create_system : ", res
-	print *
-	
-	! res = torchfort_rl_off_policy_create_distributed_system(this%tf_key, & 
-	! this%yaml_path, NEKO_COMM, this%model_device, this%rb_device)
-	! if (res /= TORCHFORT_RESULT_SUCCESS) stop
-	! print *, "Result of create_distributed_system : ", res
+	select case (trim(this%policy_method))
+	case ("on-policy")
+		res = torchfort_rl_on_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
+		if (res /= TORCHFORT_RESULT_SUCCESS) stop
+		print *, "Result of on_policy_create_system : ", res
+		print *
+	case ("off-policy")
+		res = torchfort_rl_off_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
+		if (res /= TORCHFORT_RESULT_SUCCESS) stop
+		print *, "Result of off_policy_create_system : ", res
+		! res = torchfort_rl_off_policy_create_distributed_system(this%tf_key, & 
+		! this%yaml_path, NEKO_COMM, this%model_device, this%rb_device)
+		! if (res /= TORCHFORT_RESULT_SUCCESS) stop
+		! print *, "Result of create_distributed_system : ", res
+		print *
+	case default
+		print *, "Unknown command: ", trim(this%policy_method)
+		stop 1
+	end select
 	
 	! print *, "===> pe_size :", pe_size	
 	! print *, "this%n_nodes : ", this%n_nodes, "from pe_rank: ", pe_rank
@@ -286,11 +299,8 @@ contains
     this%displs(0) = 0
     do i = 1, (pe_size - 1)
        this%displs(i) = this%displs(i-1) + this%recvcounts(i-1)
-       if (pe_rank == 0) then
-           print *, "i = ", i, "    displs(i) = ", this%displs(i), "    displs(i-1) = ", this%displs(i-1), &
-                     "    recvcounts(i-1)", this%recvcounts(i-1)
-       end if
     end do
+	print *, "displs = ", this%displs
 	
 	! Get the total number of agents across all ranks
     call MPI_Allreduce(this%n_nodes, this%total_agents, 1, MPI_INTEGER, MPI_SUM, NEKO_COMM, ierr)
@@ -479,7 +489,7 @@ contains
             this%tau_x%x, this%tau_y%x, this%tau_z%x, &
             this%n_nodes, u%Xh%lx, u%msh%nelv, &
             this%kappa, this%B, tstep, & 
-			this%tf_key, this%yaml_path, this%log_dir, &
+			this%tf_key, this%yaml_path, this%log_dir, this%policy_method, &
 			this%model_device, this%rb_device, this%start_train_tstep, this%tsteps_rl, this%n_epochs, this%tau_true, &
 			this%ui_l%x, this%vi_l%x, this%wi_l%x, this%normu_l%x, this%magu_l%x, this%vg_l%x, this%utau_l%x, &
 			this%tau_old_l%x, this%tau_new_l%x, &

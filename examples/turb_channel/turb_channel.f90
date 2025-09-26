@@ -139,6 +139,7 @@ contains
 						this%episode = this%episode + 1
 						! ::: WANDB LOGGING :::
 						res = torchfort_rl_off_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
+						! res = torchfort_rl_on_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
 						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
 						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
 						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "rew_out", this%episode, this%reward_out(1))
