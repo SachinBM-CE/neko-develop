@@ -55,7 +55,7 @@ contains
   subroutine rlwm_compute_cpu(u, v, w, ind_r, ind_s, ind_t, ind_e, &
        n_x, n_y, n_z, nu, h, tau_x, tau_y, tau_z, n_nodes, lx, nelv, &
        kappa, B, tstep, &
-	   tf_key, yaml_path, log_dir, policy_method, & 
+	   tf_key, yaml_path, log_dir, policy_method, phase, & 
 	   model_device, rb_device, start_train_tstep, tsteps_rl, n_epochs, tau_true, &
 	   ui_l, vi_l, wi_l, normu_l, magu_l, vg_l, utau_l, & 
 	   tau_old_l, tau_new_l, &
@@ -79,7 +79,7 @@ contains
 	
 	!> TorchFort ******************************************************************************************************************
 	!> JSON INPUTS 
-    character(len=*), intent(in) :: tf_key, yaml_path, log_dir, policy_method
+    character(len=*), intent(in) :: tf_key, yaml_path, log_dir, policy_method, phase
     integer, intent(in) :: model_device, rb_device, start_train_tstep, tsteps_rl, n_epochs
     real(kind=rp), intent(in) :: tau_true
 	!> 1D Arrays
@@ -119,12 +119,13 @@ contains
       print '(" 02. yaml_path         : ", A)', yaml_path
       print '(" 03. log_dir           : ", A)', log_dir
 	  print '(" 04. policy_method     : ", A)', policy_method
-      print '(" 05. model_device      : ", I0)', model_device
-      print '(" 06. rb_device         : ", I0)', rb_device
-      print '(" 07. tau_true          : ", F0.6)', tau_true	  
-	  print '(" 08. start_train_tstep : ", I0)', start_train_tstep
-	  print '(" 09. tsteps_rl         : ", I0)', tsteps_rl
-	  print '(" 10. n_epochs          : ", I0)', n_epochs
+	  print '(" 05. phase             : ", A)', phase
+      print '(" 06. model_device      : ", I0)', model_device
+      print '(" 07. rb_device         : ", I0)', rb_device
+      print '(" 08. tau_true          : ", F0.6)', tau_true	  
+	  print '(" 09. start_train_tstep : ", I0)', start_train_tstep
+	  print '(" 10. tsteps_rl         : ", I0)', tsteps_rl
+	  print '(" 11. n_epochs          : ", I0)', n_epochs
       print *, "------------------------------------------------------"
       print *, ""
     end if
@@ -242,7 +243,8 @@ contains
 	if (pe_rank .eq. 0) then
 		select case (trim(policy_method))
 		case ("on-policy")
-			res = torchfort_rl_on_policy_predict(tf_key, global_state, global_action)
+			! res = torchfort_rl_on_policy_predict(tf_key, global_state, global_action)
+			res = torchfort_rl_on_policy_predict_explore(tf_key, global_state, global_action)
 			if (res /= TORCHFORT_RESULT_SUCCESS) stop
 		case ("off-policy")
 			res = torchfort_rl_off_policy_predict(tf_key, global_state, global_action)
@@ -296,42 +298,46 @@ contains
 		  
 		end do ! End of action do loop
 
-		! Update rollout buffer (or) replay buffer
-		if (pe_rank .eq. 0) then
-			select case (trim(policy_method))
-			case ("on-policy")
-				res = torchfort_rl_on_policy_update_rollout_buffer(tf_key, & 
-				      global_state_older, global_action_older, global_reward, global_terminal)
-				if (res /= TORCHFORT_RESULT_SUCCESS) stop
-			case ("off-policy")
-				res = torchfort_rl_off_policy_update_replay_buffer(tf_key, & 
-					  global_state_older, global_action_older, global_state, global_reward, global_terminal)
-				if (res /= TORCHFORT_RESULT_SUCCESS) stop
-			end select
-		end if
+		if ((trim(phase) .eq. 'training') .and. (pe_rank .eq. 0)) then
+		
+			! Update rollout buffer (or) replay buffer
+			! if (pe_rank .eq. 0) then
+				select case (trim(policy_method))
+				case ("on-policy")
+					res = torchfort_rl_on_policy_update_rollout_buffer(tf_key, & 
+						  global_state_older, global_action_older, global_reward, global_terminal)
+					if (res /= TORCHFORT_RESULT_SUCCESS) stop
+				case ("off-policy")
+					res = torchfort_rl_off_policy_update_replay_buffer(tf_key, & 
+						  global_state_older, global_action_older, global_state, global_reward, global_terminal)
+					if (res /= TORCHFORT_RESULT_SUCCESS) stop
+				end select
+			! end if
 
-		! Training & 
-		if (mod(tstep, tsteps_rl) == 0) then
-			select case (trim(policy_method))
-			case ("on-policy")
-				res = torchfort_rl_on_policy_is_ready(tf_key, is_ready)
-				do epoch = 1, n_epochs
-					if (is_ready) then
-						res = torchfort_rl_on_policy_train_step(tf_key, p_loss_val, q_loss_val)
-					end if
-				end do
-				res = torchfort_rl_on_policy_save_checkpoint(tf_key, log_dir)
-				if (res /= TORCHFORT_RESULT_SUCCESS) stop
-			case ("off-policy")
-				res = torchfort_rl_off_policy_is_ready(tf_key, is_ready)
-				do epoch = 1, n_epochs
-					if (is_ready) then
-						res = torchfort_rl_off_policy_train_step(tf_key, p_loss_val, q_loss_val)
-					end if
-				end do
-				res = torchfort_rl_off_policy_save_checkpoint(tf_key, log_dir)
-				if (res /= TORCHFORT_RESULT_SUCCESS) stop
-			end select
+			! Training & Saving
+			if (mod(tstep, tsteps_rl) == 0) then
+				select case (trim(policy_method))
+				case ("on-policy")
+					res = torchfort_rl_on_policy_is_ready(tf_key, is_ready)
+					do epoch = 1, n_epochs
+						if (is_ready) then
+							res = torchfort_rl_on_policy_train_step(tf_key, p_loss_val, q_loss_val)
+						end if
+					end do
+					res = torchfort_rl_on_policy_save_checkpoint(tf_key, log_dir)
+					if (res /= TORCHFORT_RESULT_SUCCESS) stop
+				case ("off-policy")
+					res = torchfort_rl_off_policy_is_ready(tf_key, is_ready)
+					do epoch = 1, n_epochs
+						if (is_ready) then
+							res = torchfort_rl_off_policy_train_step(tf_key, p_loss_val, q_loss_val)
+						end if
+					end do
+					res = torchfort_rl_off_policy_save_checkpoint(tf_key, log_dir)
+					if (res /= TORCHFORT_RESULT_SUCCESS) stop
+				end select
+			end if
+			
 		end if
 		
 		! res = torchfort_rl_off_policy_evaluate(this%tf_key, this%state_older, this%action_older, reward_out)
@@ -340,7 +346,7 @@ contains
   end subroutine rlwm_compute_cpu
   
 !==================================================================================================================================
-!> Calculates the instantaneous reward for all agents
+!> Calculates the instantaneous reward for agent 'i'
 !==================================================================================================================================
 subroutine calculate_reward(i, n_nodes, tau_true, tau_old_l, tau_new_l, error_new, error_old, rel_error, &
 							reward, total_reward, reward_out, base_reward, bonus_reward)
@@ -350,27 +356,30 @@ subroutine calculate_reward(i, n_nodes, tau_true, tau_old_l, tau_new_l, error_ne
   real(kind=rp), dimension(n_nodes), intent(inout) :: tau_old_l, tau_new_l, error_new, error_old, rel_error, &
 													  reward, total_reward, reward_out, base_reward, bonus_reward
   
-  error_new(i) = abs(tau_true - tau_new_l(i))
-  error_old(i) = abs(tau_true - tau_old_l(i))
-  base_reward(i) = (error_new(i) - error_old(i)) / tau_true
+  ! error_new(i) = abs(tau_true - tau_new_l(i))
+  ! error_old(i) = abs(tau_true - tau_old_l(i))
+  ! base_reward(i) = (error_new(i) - error_old(i)) / tau_true
   
-  rel_error(i) = error_new(i) / tau_true
-  if (rel_error(i) < 0.01_rp) then
-	 bonus_reward(i) = 1.0_rp - rel_error(i)
-  else
-	 bonus_reward(i) = 0.0_rp
-  end if
+  ! rel_error(i) = error_new(i) / tau_true
+  ! if (rel_error(i) < 0.01_rp) then
+	 ! bonus_reward(i) = 1.0_rp - rel_error(i)
+  ! else
+	 ! bonus_reward(i) = 0.0_rp
+  ! end if
+
+  ! ! Reward collected by agent 'i' at 'tstep'
+  ! reward(i) = base_reward(i) + bonus_reward(i)
   
-  ! Reward collected by agent 'i' at 'tstep'
-  reward(i) = base_reward(i) + bonus_reward(i)
+  ! ! Reward collected by agent 'i' in one episode consisting of 'tsteps_rl' trajectories
+  ! total_reward(i) = total_reward(i) + reward(i)
   
-  ! Reward collected by agent 'i' in one episode consisting of 'tsteps_rl' trajectories
+  reward(i) = abs(tau_new_l(i) - tau_true) / tau_true
   total_reward(i) = total_reward(i) + reward(i)
 
 end subroutine calculate_reward
 
 !==================================================================================================================================
-!> Print all debug info 
+!> Print all debug info agent 'i'
 !==================================================================================================================================
 subroutine print_debug_info(i, a, b, n_nodes, &
 							ui_l, vi_l, wi_l, normu_l, magu_l, h, &

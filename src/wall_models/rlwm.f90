@@ -76,7 +76,7 @@ module rlwm
 	 
 	 !> TorchFort =================================================================================================================
 	 !> JSON INPUTS 
-	 character(len=256) :: tf_key, yaml_path, log_dir, policy_method
+	 character(len=256) :: tf_key, yaml_path, log_dir, policy_method, phase
 	 integer :: model_device, rb_device, start_train_tstep, tsteps_rl, n_epochs
 	 real(kind=rp) :: tau_true
 	 !> Vectors
@@ -180,6 +180,9 @@ contains
 	call json_get(json, "policy_method", tmp_string)
 	this%policy_method = trim(tmp_string)
 
+	call json_get(json, "phase", tmp_string)
+	this%phase = trim(tmp_string)
+
 	call json_get_or_default(json, "model_device", tmp_real, -1.0_rp)
 	this%model_device = int(tmp_real)
 
@@ -203,25 +206,33 @@ contains
 	print *, "Result of set_manual_seed : ", res
 	print *
 	
-	select case (trim(this%policy_method))
-	case ("on-policy")
-		res = torchfort_rl_on_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
+	if (pe_rank .eq. 0) then
+		select case (trim(this%policy_method))
+		case ("on-policy")
+			res = torchfort_rl_on_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
+			if (res /= TORCHFORT_RESULT_SUCCESS) stop
+			print *, "Result of on_policy_create_system : ", res
+			print *
+		case ("off-policy")
+			res = torchfort_rl_off_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
+			if (res /= TORCHFORT_RESULT_SUCCESS) stop
+			print *, "Result of off_policy_create_system : ", res
+			! res = torchfort_rl_off_policy_create_distributed_system(this%tf_key, & 
+			! this%yaml_path, NEKO_COMM, this%model_device, this%rb_device)
+			! if (res /= TORCHFORT_RESULT_SUCCESS) stop
+			! print *, "Result of create_distributed_system : ", res
+			print *
+		case default
+			print *, "Unknown command: ", trim(this%policy_method)
+			stop 1
+		end select
+	end if
+	
+	if (trim(this%phase) .eq. 'testing') then
+		res = torchfort_rl_off_policy_load_checkpoint(this%tf_key, this%log_dir)
+		print *, "Result of load_checkpoint : ", res
 		if (res /= TORCHFORT_RESULT_SUCCESS) stop
-		print *, "Result of on_policy_create_system : ", res
-		print *
-	case ("off-policy")
-		res = torchfort_rl_off_policy_create_system(this%tf_key, this%yaml_path, this%model_device, this%rb_device)
-		if (res /= TORCHFORT_RESULT_SUCCESS) stop
-		print *, "Result of off_policy_create_system : ", res
-		! res = torchfort_rl_off_policy_create_distributed_system(this%tf_key, & 
-		! this%yaml_path, NEKO_COMM, this%model_device, this%rb_device)
-		! if (res /= TORCHFORT_RESULT_SUCCESS) stop
-		! print *, "Result of create_distributed_system : ", res
-		print *
-	case default
-		print *, "Unknown command: ", trim(this%policy_method)
-		stop 1
-	end select
+	end if
 	
 	! print *, "===> pe_size :", pe_size	
 	! print *, "this%n_nodes : ", this%n_nodes, "from pe_rank: ", pe_rank
@@ -489,7 +500,7 @@ contains
             this%tau_x%x, this%tau_y%x, this%tau_z%x, &
             this%n_nodes, u%Xh%lx, u%msh%nelv, &
             this%kappa, this%B, tstep, & 
-			this%tf_key, this%yaml_path, this%log_dir, this%policy_method, &
+			this%tf_key, this%yaml_path, this%log_dir, this%policy_method, this%phase, &
 			this%model_device, this%rb_device, this%start_train_tstep, this%tsteps_rl, this%n_epochs, this%tau_true, &
 			this%ui_l%x, this%vi_l%x, this%wi_l%x, this%normu_l%x, this%magu_l%x, this%vg_l%x, this%utau_l%x, &
 			this%tau_old_l%x, this%tau_new_l%x, &

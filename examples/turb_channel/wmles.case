@@ -64,13 +64,15 @@
           "h_index": 1,
           "zone_indices": [3,4],
 		  "tf_key": "rlwm",
-		  "yaml_path": "/home/sachinbm/cpu-neko-tf/neko-develop/examples/turb_channel/config_les.yaml",
+		  "yaml_path": "/home/sachinbm/cpu-neko-tf/neko-develop/examples/turb_channel/config_ppo.yaml",
 		  "log_dir": "/home/sachinbm/cpu-neko-tf/neko-develop/examples/turb_channel/logdir",
+		  "policy_method": "on-policy",
+		  "phase": "training",
 		  "model_device": -1,
 		  "rb_device": -1,
 		  "tau_true": 0.0027,
 		  "start_train_tstep": 3,
-		  "tsteps_rl": 100,
+		  "tsteps_rl": 10,
 		  "n_epochs": 100
         }
       ],

@@ -138,12 +138,23 @@ contains
 						reward_sum = glsum(this%total_reward%x(:), this%n_nodes)
 						this%episode = this%episode + 1
 						! ::: WANDB LOGGING :::
-						res = torchfort_rl_off_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
-						! res = torchfort_rl_on_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
-						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
-						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
-						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "rew_out", this%episode, this%reward_out(1))
-						! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "tau_new", this%episode, this%tau_new_l(1))
+						if ((trim(this%phase) .eq. 'training') .and. (pe_rank .eq. 0)) then
+							select case (trim(this%policy_method))
+							case ("on-policy")	
+								res = torchfort_rl_on_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
+								res = torchfort_rl_on_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
+								res = torchfort_rl_on_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
+							case ("off-policy")
+								res = torchfort_rl_off_policy_wandb_log(this%tf_key, "reward_sum", this%episode, reward_sum)
+								! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "actor_loss", this%episode, this%p_loss_val)
+								! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "critic_loss", this%episode, this%q_loss_val)
+								! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "rew_out", this%episode, this%reward_out(1))
+								! res = torchfort_rl_off_policy_wandb_log(this%tf_key, "tau_new", this%episode, this%tau_new_l(1))
+							case default
+								print *, "Unknown command: ", trim(this%policy_method)
+								stop 1
+							end select
+						end if
 					end if
 			  
 					do i = 1, this%n_nodes
